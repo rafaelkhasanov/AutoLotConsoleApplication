@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoLotConsoleApplication.EF;
 using static System.Console;
+using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 
 namespace AutoLotConsoleApplication
 {
@@ -16,6 +18,7 @@ namespace AutoLotConsoleApplication
             int carId = AddNewRecord();
             WriteLine(carId);
             FunWithLinqQueries();
+            UpdateRecord(3);
             ReadLine();
         }
 
@@ -103,6 +106,74 @@ namespace AutoLotConsoleApplication
                 foreach (Car car in blackCars)
                 {
                     WriteLine(car);
+                }
+            }
+        }
+
+        static void RemoveRecord(int carId)
+        {
+            //Найти запись об автомобиле, подлежащую удалению, по первичному ключу.
+            using (var context = new AutoLotEntities())
+            {
+                //Проверить наличие записи
+                Car carToDelete = context.Cars.Find(carId);
+                if (carToDelete != null)
+                {
+                    context.Cars.Remove(carToDelete);
+                    //Этот код предназначен чисто для демонстрации того,
+                    //что состояние сущности изменилось на Deleted.
+                    if (context.Entry(carToDelete).State != EntityState.Deleted)    
+                    {
+                        throw new Exception("Unable to delete this record");
+                    }
+                    context.SaveChanges();
+                }
+            }
+        }
+
+        static void RemoveMultipleRecords(IEnumerable<Car> carsToRemove)
+        {
+            using (var context = new AutoLotEntities())
+            {
+                //Каждая запись должна быть загружен в DbChangeTracker 
+                context.Cars.RemoveRange(carsToRemove);
+                context.SaveChanges();
+            }
+        }
+
+        static void RemoveRecordUsingEntityState(int carId)
+        {
+            using (var context = new AutoLotEntities())
+            {
+                Car carToDelete = new Car { CarId = carId };
+                context.Entry(carToDelete).State = EntityState.Deleted;
+                try
+                {
+                    context.SaveChanges();
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    WriteLine(ex);
+                }
+            }
+        }
+
+        static void UpdateRecord(int carId)
+        {
+            //Найти запись об автомобиле по первичному ключу
+            using (var context = new AutoLotEntities())
+            {
+                Car carToUpdate = context.Cars.Find(carId);
+                if (carToUpdate != null)
+                {
+                    WriteLine(context.Entry(carToUpdate).State);
+                    carToUpdate.Color = "Red";
+                    WriteLine(context.Entry(carToUpdate).State);
+                    context.SaveChanges();
+                    foreach (var item in context.Cars)
+                    {
+                        WriteLine(item);
+                    }
                 }
             }
         }
